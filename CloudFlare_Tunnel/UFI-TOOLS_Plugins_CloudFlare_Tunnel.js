@@ -538,18 +538,140 @@
         showLogViewer();
     };
 
+    const showStatusViewer = () => {
+        const existing = document.getElementById('CLOUDFLARE_STATUS_VIEWER');
+        if (existing) { existing.remove(); }
+        
+        const viewer = document.createElement('div');
+        viewer.id = 'CLOUDFLARE_STATUS_VIEWER';
+        viewer.style.cssText = `
+            position: fixed; top: 10%; left: 5%; right: 5%; bottom: 10%;
+            background: #1e1e2e; border-radius: 12px; border: 1px solid #444;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.5); z-index: 9999;
+            display: flex; flex-direction: column; overflow: hidden;
+        `;
+        
+        const header = document.createElement('div');
+        header.style.cssText = `
+            display: flex; align-items: center; justify-content: space-between;
+            padding: 12px 16px; background: #2a2a3e; border-bottom: 1px solid #444;
+        `;
+        
+        const title = document.createElement('div');
+        title.textContent = '📊 服务状态';
+        title.style.cssText = 'color: #fff; font-weight: bold; font-size: 14px;';
+        
+        const actions = document.createElement('div');
+        actions.style.cssText = 'display: flex; gap: 8px;';
+        
+        const refreshBtn = document.createElement('button');
+        refreshBtn.textContent = '刷新';
+        refreshBtn.style.cssText = `
+            padding: 4px 12px; background: #3b82f6; color: #fff; border: none;
+            border-radius: 4px; font-size: 12px; cursor: pointer;
+        `;
+        
+        const copyBtn = document.createElement('button');
+        copyBtn.textContent = '复制';
+        copyBtn.style.cssText = `
+            padding: 4px 12px; background: #10b981; color: #fff; border: none;
+            border-radius: 4px; font-size: 12px; cursor: pointer;
+        `;
+        
+        const closeBtn = document.createElement('button');
+        closeBtn.textContent = '关闭';
+        closeBtn.style.cssText = `
+            padding: 4px 12px; background: #ef4444; color: #fff; border: none;
+            border-radius: 4px; font-size: 12px; cursor: pointer;
+        `;
+        
+        actions.appendChild(refreshBtn);
+        actions.appendChild(copyBtn);
+        actions.appendChild(closeBtn);
+        header.appendChild(title);
+        header.appendChild(actions);
+        
+        const content = document.createElement('div');
+        content.id = 'cloudflare_status_content';
+        content.style.cssText = `
+            flex: 1; padding: 12px; overflow-y: auto;
+            font-family: 'Courier New', monospace; font-size: 12px;
+            line-height: 1.6; color: #ccc; white-space: pre-wrap; word-break: break-all;
+        `;
+        content.textContent = '加载中...';
+        
+        const footer = document.createElement('div');
+        footer.style.cssText = `
+            padding: 8px 16px; background: #2a2a3e; border-top: 1px solid #444;
+            font-size: 11px; color: #888; text-align: right;
+        `;
+        footer.id = 'cloudflare_status_footer';
+        footer.textContent = '服务状态检查';
+        
+        viewer.appendChild(header);
+        viewer.appendChild(content);
+        viewer.appendChild(footer);
+        document.body.appendChild(viewer);
+        
+        closeBtn.addEventListener('click', () => viewer.remove());
+        
+        const loadStatus = async () => {
+            try {
+                const { running: rn, pid: rp } = await isServiceRunning(false);
+                let statusText = '';
+                
+                if (rn) {
+                    const pi = await runShellWithRoot(`ps -o etime=,pcpu=,pmem= -p ${rp} 2>/dev/null | tail -1 || echo "未知 未知 未知"`);
+                    const [up = "未知", cp = "未知", mm = "未知"] = pi.success ? pi.content.trim().split(/\s+/) : ["未知", "未知", "未知"];
+                    let ci = ""; const cr = await runShellWithRoot(`cat ${CLOUDFLARE_CONFIG.CONFIG_FILE} 2>/dev/null`);
+                    if (cr.success && cr.content.trim()) ci = `\n\n--- config.yml ---\n${cr.content.trim()}`;
+                    
+                    statusText = `🟢 服务运行中\n\nPID: ${rp}\n运行时长: ${up}\nCPU占用: ${cp}%\n内存占用: ${mm}%\n运行模式: ${PLUGIN_CONFIG.mode}${ci}`;
+                    title.style.color = '#10b981';
+                } else {
+                    const di = await diagnosisStartupFailure();
+                    statusText = `🔴 服务未运行\n\n${di}`;
+                    title.style.color = '#ef4444';
+                }
+                
+                content.textContent = statusText;
+                footer.textContent = `最后更新: ${new Date().toLocaleString('zh-CN')}`;
+            } catch (e) { 
+                content.textContent = `❌ 检查失败: ${e.message}`;
+                title.style.color = '#ef4444';
+            }
+        };
+        
+        const copyStatus = () => {
+            const text = content.textContent;
+            if (!text || text === '加载中...') {
+                ToastManager.warning("暂无状态信息可复制");
+                return;
+            }
+            try {
+                if (navigator.clipboard) {
+                    navigator.clipboard.writeText(text);
+                } else {
+                    const ta = document.createElement('textarea');
+                    ta.value = text;
+                    document.body.appendChild(ta);
+                    ta.select();
+                    document.execCommand('copy');
+                    document.body.removeChild(ta);
+                }
+                ToastManager.success("状态信息已复制到剪贴板");
+            } catch (e) { ToastManager.error(`复制失败: ${e.message}`); }
+        };
+        
+        refreshBtn.addEventListener('click', loadStatus);
+        copyBtn.addEventListener('click', copyStatus);
+        
+        loadStatus();
+    };
+    
     const checkStatus = async () => {
         if (!(await validateAdvancedPermission())) return;
-        try {
-            const { running: rn, pid: rp } = await isServiceRunning(false);
-            if (rn) {
-                const pi = await runShellWithRoot(`ps -o etime=,pcpu=,pmem= -p ${rp} 2>/dev/null | tail -1 || echo "未知 未知 未知"`);
-                const [up = "未知", cp = "未知", mm = "未知"] = pi.success ? pi.content.trim().split(/\s+/) : ["未知", "未知", "未知"];
-                let ci = ""; const cr = await runShellWithRoot(`cat ${CLOUDFLARE_CONFIG.CONFIG_FILE} 2>/dev/null`);
-                if (cr.success && cr.content.trim()) ci = `\n\nconfig.yml:\n${cr.content.trim()}`;
-                ToastManager.success(`服务运行中\nPID: ${rp}\n运行: ${up}\nCPU: ${cp}% 内存: ${mm}%\n模式: ${PLUGIN_CONFIG.mode}${ci}`, 15000);
-            } else { const di = await diagnosisStartupFailure(); ToastManager.warning(`服务未运行\n\n${di}`); }
-        } catch (e) { ToastManager.error(`检查失败: ${e.message}`); }
+        showStatusViewer();
     };
 
     // ==================== 操作说明系统 ====================
