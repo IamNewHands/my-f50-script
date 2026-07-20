@@ -1,0 +1,10 @@
+# 敏感配置
+.sub_url
+.custom_rules_count
+
+# 系统文件
+.DS_Store
+Thumbs.db
+
+# 下载的临时文件
+D:\Download\
