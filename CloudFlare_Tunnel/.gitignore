@@ -1,0 +1,6 @@
+# 忽略临时文件
+*.swp
+*.bak
+*~
+.DS_Store
+Thumbs.db
