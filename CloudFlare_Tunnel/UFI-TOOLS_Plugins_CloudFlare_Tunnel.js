@@ -46,16 +46,16 @@
         },
         info: (message, duration = 3000) => {
             ToastManager.clear();
-            ToastManager.currentToast = createToast(message, 'blue', duration);
+            ToastManager.currentToast = createToast(message, '#38bdf8', duration);
         },
         loading: (message) => {
             ToastManager.clear();
-            ToastManager.currentToast = createToast(`\u23F3 ${message}`, 'blue', 2000);
+            ToastManager.currentToast = createToast(`\u23F3 ${message}`, '#fbbf24', 2000);
         },
         guide: (title, content, duration = 30000) => {
             ToastManager.clear();
             const styledContent = `\n=== ${title} ===\n\n${content}\n\n(点击关闭或等待自动消失)`;
-            ToastManager.currentToast = createToast(styledContent, 'blue', duration);
+            ToastManager.currentToast = createToast(styledContent, '#60a5fa', duration);
         },
     };
 
@@ -227,39 +227,87 @@
         return true;
     };
 
+    const logInstallStep = async (step, message) => {
+        const timestamp = new Date().toLocaleString('zh-CN');
+        await runShellWithRoot(`echo "[${timestamp}] [INSTALL] ${step}: ${message}" >> ${CLOUDFLARE_CONFIG.LOG_FILE}`);
+    };
+
     // ==================== 核心操作：安装 ====================
     const installCloudflared = async () => {
         if (checkWeakToken()) { ToastManager.error("弱口令，请更改后再操作！", 8000); return; }
         if (!(await validateAdvancedPermission())) return;
         try {
-            ToastManager.loading("检查安装状态...");
+            await runShellWithRoot(`mkdir -p ${CLOUDFLARE_CONFIG.INSTALL_DIR}; echo "[INSTALL] 安装开始" > ${CLOUDFLARE_CONFIG.LOG_FILE}`);
+
+            // 步骤1：检查是否已安装
+            ToastManager.info("[1/5] 检查是否已安装...", 2000);
             const ck = await runShellWithRoot(`ls -la ${CLOUDFLARE_CONFIG.BINARY_PATH} 2>/dev/null`);
-            if (ck.success && ck.content.includes("cloudflared")) { ToastManager.warning("已安装，无需重复安装"); return; }
-            ToastManager.loading("创建安装目录...");
-            const mk = await runShellWithRoot(`mkdir -p ${CLOUDFLARE_CONFIG.INSTALL_DIR}; chmod 755 ${CLOUDFLARE_CONFIG.INSTALL_DIR}`);
-            if (!mk.success) throw new Error("创建目录失败");
-            const dl = await getDownloader(); if (!dl) throw new Error("未找到curl/wget");
-            const urls = [
-                "https://ghproxy.com/https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-arm64",
-                "https://mirror.ghproxy.com/https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-arm64",
-                "https://ghproxy.net/https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-arm64",
-                "https://gitproxy.click/https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-arm64",
-                CLOUDFLARE_CONFIG.DOWNLOAD_URL,
-            ];
-            let ok = false;
-            for (const u of urls) { ToastManager.loading(`从 ${u.split('/')[2]} 下载...`); if (await downloadWithRetry(dl, u, CLOUDFLARE_CONFIG.TEMP_DOWNLOAD_PATH, 2, 300)) { ok = true; break; } }
-            if (!ok) {
-                ToastManager.error("下载失败\n手动安装：1.电脑访问github.com/cloudflare/cloudflared/releases\n2.下载cloudflared-linux-arm64\n3.上传到/data/cloudflared/\n4.chmod 755 /data/cloudflared/cloudflared", 15000);
+            if (ck.success && ck.content.includes("cloudflared")) {
+                ToastManager.warning("CloudFlare Tunnel 已安装，无需重复安装");
+                await logInstallStep("SKIP", "已安装，跳过");
                 return;
             }
-            ToastManager.loading("配置文件...");
-            const su = await runShellWithRoot(`mv "${CLOUDFLARE_CONFIG.TEMP_DOWNLOAD_PATH}" "${CLOUDFLARE_CONFIG.BINARY_PATH}"; chmod 755 "${CLOUDFLARE_CONFIG.BINARY_PATH}"; ls -la "${CLOUDFLARE_CONFIG.BINARY_PATH}"`);
-            if (!su.success || !su.content.includes("cloudflared")) throw new Error("文件移动失败");
-            ToastManager.loading("验证...");
-            const vf = await runShellWithRoot(`"${CLOUDFLARE_CONFIG.BINARY_PATH}" --version`);
-            if (!vf.success) throw new Error("验证失败，文件可能损坏");
-            ToastManager.success(`安装成功!\n${vf.content.trim()}\n路径: ${CLOUDFLARE_CONFIG.BINARY_PATH}`);
-        } catch (e) { ToastManager.error(`安装失败: ${e.message}`); }
+            ToastManager.success("[1/5] 检查通过，未安装");
+            await logInstallStep("CHECK", "未安装，开始安装");
+
+            // 步骤2：创建目录
+            ToastManager.info("[2/5] 创建安装目录...", 2000);
+            const mk = await runShellWithRoot(`mkdir -p ${CLOUDFLARE_CONFIG.INSTALL_DIR}; chmod 755 ${CLOUDFLARE_CONFIG.INSTALL_DIR}`);
+            if (!mk.success) {
+                await logInstallStep("FAIL", "创建目录失败");
+                throw new Error("创建安装目录失败，请检查权限");
+            }
+            ToastManager.success(`[2/5] 目录创建成功: ${CLOUDFLARE_CONFIG.INSTALL_DIR}`);
+            await logInstallStep("DIR", `创建目录: ${CLOUDFLARE_CONFIG.INSTALL_DIR}`);
+
+            // 步骤3：检测下载工具
+            ToastManager.info("[3/5] 检测下载工具...", 2000);
+            const dl = await getDownloader();
+            if (!dl) {
+                await logInstallStep("FAIL", "未找到下载工具");
+                throw new Error("未找到 curl 或 wget，无法下载。请确保设备已安装 curl 或 wget。");
+            }
+            ToastManager.success(`[3/5] 下载工具就绪: ${dl.split(' ')[0]}`);
+            await logInstallStep("DL_TOOL", `下载工具: ${dl.split(' ')[0]}`);
+
+            // 步骤4：从 GitHub 下载
+            ToastManager.info(`[4/5] 正在从 GitHub 下载 cloudflared...\n来源: ${CLOUDFLARE_CONFIG.DOWNLOAD_URL}\n\n预计耗时: 30-120秒\n如超过2分钟未完成，请检查网络后重试`, 5000);
+            await logInstallStep("DOWNLOAD", `开始下载: ${CLOUDFLARE_CONFIG.DOWNLOAD_URL}`);
+            
+            const startTime = Date.now();
+            const downloaded = await downloadWithRetry(dl, CLOUDFLARE_CONFIG.DOWNLOAD_URL, CLOUDFLARE_CONFIG.TEMP_DOWNLOAD_PATH, 3, 600);
+            const elapsed = Math.floor((Date.now() - startTime) / 1000);
+            
+            if (!downloaded) {
+                await logInstallStep("FAIL", `下载失败，耗时${elapsed}秒`);
+                ToastManager.error(`下载失败!\n\n耗时: ${elapsed}秒\n来源: ${CLOUDFLARE_CONFIG.DOWNLOAD_URL}\n\n可能原因：\n1. 网络无法访问GitHub\n2. 网络速度过慢\n3. 下载超时\n\n手动安装方法：\n1. 电脑浏览器打开 https://github.com/cloudflare/cloudflared/releases/latest\n2. 下载 cloudflared-linux-arm64 文件\n3. 通过 UFI-TOOLS 文件管理上传到 /data/cloudflared/cloudflared\n4. 回到本页重新点击「安装 Tunnel」`, 20000);
+                return;
+            }
+            ToastManager.success(`[4/5] 下载完成! 耗时: ${elapsed}秒`);
+            await logInstallStep("DOWNLOAD", `下载成功，耗时${elapsed}秒`);
+
+            // 步骤5：部署并验证
+            ToastManager.info("[5/5] 部署文件并验证...", 2000);
+            await logInstallStep("DEPLOY", "开始部署文件");
+            
+            const su = await runShellWithRoot(`
+                mv "${CLOUDFLARE_CONFIG.TEMP_DOWNLOAD_PATH}" "${CLOUDFLARE_CONFIG.BINARY_PATH}"
+                chmod 755 "${CLOUDFLARE_CONFIG.BINARY_PATH}"
+                "${CLOUDFLARE_CONFIG.BINARY_PATH}" --version
+            `);
+            
+            if (!su.success || !su.content.includes("cloudflared")) {
+                await logInstallStep("FAIL", "文件部署或验证失败");
+                throw new Error("文件部署或验证失败，请重试");
+            }
+            
+            const version = su.content.trim();
+            ToastManager.success(`安装成功!\n\n版本: ${version}\n路径: ${CLOUDFLARE_CONFIG.BINARY_PATH}\n耗时: ${Math.floor((Date.now() - startTime) / 1000)}秒\n\n下一步：填写配置后点击「启动服务」`, 15000);
+            await logInstallStep("SUCCESS", `安装成功，版本: ${version}`);
+        } catch (e) { 
+            await logInstallStep("ERROR", e.message);
+            ToastManager.error(`安装失败: ${e.message}`); 
+        }
     };
 
     // ==================== 核心操作：启动 ====================
