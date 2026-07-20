@@ -10,6 +10,10 @@
 │   ├── README.md         # 插件详细说明
 │   ├── .gitignore        # Git 忽略配置
 │   └── UFI-TOOLS_Plugins_*.js  # UFI-TOOLS 插件脚本
+├── CloudFlare_Tunnel/    # CloudFlare Tunnel 内网穿透插件
+│   ├── README.md         # 插件详细说明
+│   ├── .gitignore        # Git 忽略配置
+│   └── UFI-TOOLS_Plugins_CloudFlare_Tunnel.js  # UFI-TOOLS 插件脚本
 └── README.md             # 本文件
 ```
 
@@ -18,6 +22,7 @@
 | 插件 | 目录 | 功能 |
 |------|------|------|
 | [猫猫_TProxy](./猫猫_TProxy/README.md) | `猫猫_TProxy/` | Clash/Mihomo 代理核心管理，支持订阅、自定义规则、内核更新等 |
+| [CloudFlare_Tunnel](./CloudFlare_Tunnel/README.md) | `CloudFlare_Tunnel/` | CloudFlare Tunnel 内网穿透，支持公网访问/私网WARP组网/双模式 |
 
 ## 使用方法
 
