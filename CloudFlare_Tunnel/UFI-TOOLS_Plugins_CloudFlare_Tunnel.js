@@ -419,15 +419,123 @@
         { pattern: /config.*error/i, message: "【分析】config.yml配置错误" },
     ];
 
+    const showLogViewer = () => {
+        const existing = document.getElementById('CLOUDFLARE_LOG_VIEWER');
+        if (existing) { existing.remove(); }
+        
+        const viewer = document.createElement('div');
+        viewer.id = 'CLOUDFLARE_LOG_VIEWER';
+        viewer.style.cssText = `
+            position: fixed; top: 10%; left: 5%; right: 5%; bottom: 10%;
+            background: #1e1e2e; border-radius: 12px; border: 1px solid #444;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.5); z-index: 9999;
+            display: flex; flex-direction: column; overflow: hidden;
+        `;
+        
+        const header = document.createElement('div');
+        header.style.cssText = `
+            display: flex; align-items: center; justify-content: space-between;
+            padding: 12px 16px; background: #2a2a3e; border-bottom: 1px solid #444;
+        `;
+        
+        const title = document.createElement('div');
+        title.textContent = '📋 日志查看器 (最近100行)';
+        title.style.cssText = 'color: #fff; font-weight: bold; font-size: 14px;';
+        
+        const actions = document.createElement('div');
+        actions.style.cssText = 'display: flex; gap: 8px;';
+        
+        const refreshBtn = document.createElement('button');
+        refreshBtn.textContent = '刷新';
+        refreshBtn.style.cssText = `
+            padding: 4px 12px; background: #3b82f6; color: #fff; border: none;
+            border-radius: 4px; font-size: 12px; cursor: pointer;
+        `;
+        
+        const copyBtn = document.createElement('button');
+        copyBtn.textContent = '复制';
+        copyBtn.style.cssText = `
+            padding: 4px 12px; background: #10b981; color: #fff; border: none;
+            border-radius: 4px; font-size: 12px; cursor: pointer;
+        `;
+        
+        const closeBtn = document.createElement('button');
+        closeBtn.textContent = '关闭';
+        closeBtn.style.cssText = `
+            padding: 4px 12px; background: #ef4444; color: #fff; border: none;
+            border-radius: 4px; font-size: 12px; cursor: pointer;
+        `;
+        
+        actions.appendChild(refreshBtn);
+        actions.appendChild(copyBtn);
+        actions.appendChild(closeBtn);
+        header.appendChild(title);
+        header.appendChild(actions);
+        
+        const content = document.createElement('div');
+        content.id = 'cloudflare_log_content';
+        content.style.cssText = `
+            flex: 1; padding: 12px; overflow-y: auto;
+            font-family: 'Courier New', monospace; font-size: 12px;
+            line-height: 1.5; color: #ccc; white-space: pre-wrap; word-break: break-all;
+        `;
+        content.textContent = '加载中...';
+        
+        const footer = document.createElement('div');
+        footer.style.cssText = `
+            padding: 8px 16px; background: #2a2a3e; border-top: 1px solid #444;
+            font-size: 11px; color: #888; text-align: right;
+        `;
+        footer.id = 'cloudflare_log_footer';
+        footer.textContent = '日志路径: /data/cloudflared/cloudflared.log';
+        
+        viewer.appendChild(header);
+        viewer.appendChild(content);
+        viewer.appendChild(footer);
+        document.body.appendChild(viewer);
+        
+        closeBtn.addEventListener('click', () => viewer.remove());
+        
+        const loadLogs = async () => {
+            try {
+                const lr = await runShellWithRoot(`tail -100 ${CLOUDFLARE_CONFIG.LOG_FILE} 2>/dev/null || echo "日志不存在"`);
+                if (!lr.success) { content.textContent = '无法读取日志'; return; }
+                const lc = lr.content || "暂无日志";
+                content.textContent = lc;
+                const lines = lc.split('\n').filter(l => l.trim()).length;
+                footer.textContent = `日志路径: /data/cloudflared/cloudflared.log | 显示: ${lines}行`;
+            } catch (e) { content.textContent = `读取失败: ${e.message}`; }
+        };
+        
+        const copyLogs = async () => {
+            try {
+                const lr = await runShellWithRoot(`tail -100 ${CLOUDFLARE_CONFIG.LOG_FILE} 2>/dev/null || echo "日志不存在"`);
+                if (!lr.success) { ToastManager.error("无法复制日志"); return; }
+                const text = lr.content || "暂无日志";
+                if (navigator.clipboard) {
+                    await navigator.clipboard.writeText(text);
+                    ToastManager.success("日志已复制到剪贴板");
+                } else {
+                    const ta = document.createElement('textarea');
+                    ta.value = text;
+                    document.body.appendChild(ta);
+                    ta.select();
+                    document.execCommand('copy');
+                    document.body.removeChild(ta);
+                    ToastManager.success("日志已复制到剪贴板");
+                }
+            } catch (e) { ToastManager.error(`复制失败: ${e.message}`); }
+        };
+        
+        refreshBtn.addEventListener('click', loadLogs);
+        copyBtn.addEventListener('click', copyLogs);
+        
+        loadLogs();
+    };
+    
     const viewLogs = async () => {
         if (!(await validateAdvancedPermission())) return;
-        try {
-            const lr = await runShellWithRoot(`tail -100 ${CLOUDFLARE_CONFIG.LOG_FILE} 2>/dev/null || echo "日志不存在"`);
-            if (!lr.success) { ToastManager.error("无法读取日志"); return; }
-            const lc = lr.content || "暂无日志";
-            const ea = ERROR_PATTERNS.find(({ pattern }) => pattern.test(lc))?.message || "";
-            ToastManager.info(`日志(最近100行):\n\n${lc}${ea ? '\n' + ea : ''}`, 20000);
-        } catch (e) { ToastManager.error(`读取日志失败: ${e.message}`); }
+        showLogViewer();
     };
 
     const checkStatus = async () => {
