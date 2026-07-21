@@ -383,23 +383,34 @@
             if (!ck.success || !ck.content.includes("cloudflared")) { ToastManager.error("未安装，请先点击安装"); return; }
             const { running, pid } = await isServiceRunning(false);
             if (running) { ToastManager.warning(`已在运行 (PID: ${pid})`); return; }
-            if (currentToken) { const st = await runShellWithRoot(`echo "${currentToken}" > ${CLOUDFLARE_CONFIG.TOKEN_FILE}`); if (!st.success) throw new Error("保存Token失败"); }
             await savePluginConfig();
             ToastManager.loading("生成配置...");
             if (!(await writeConfigYml())) throw new Error("写入config.yml失败");
             await runShellWithRoot(`rm -f ${CLOUDFLARE_CONFIG.LOG_FILE}`);
             if (mode === "private" || mode === "both") { if (!(await configurePrivateRoutes())) return; }
+            // Token 用 base64 写入文件，避免 shell 特殊字符
+            if (currentToken) {
+                let tokenB64 = "";
+                try { tokenB64 = btoa(unescape(encodeURIComponent(currentToken))); } catch (e) { tokenB64 = btoa(currentToken); }
+                const wrTok = await runShellWithRoot(`echo '${tokenB64}' | base64 -d > ${CLOUDFLARE_CONFIG.TOKEN_FILE}; chmod 600 ${CLOUDFLARE_CONFIG.TOKEN_FILE}; echo OK`);
+                if (!wrTok.success || !wrTok.content.includes("OK")) throw new Error("写入Token文件失败");
+            }
             ToastManager.loading("启动服务...");
+            // 关键：--config 是 tunnel 全局选项，必须在 run 之前
+            // --token-file 是 run 子命令选项，必须在 run 之后
+            // 错误写法: tunnel run --token X --config Y  → flag -config not defined
+            // 正确写法: tunnel --config Y run --token-file X
             await runShellWithRoot(`
-                cd ${CLOUDFLARE_CONFIG.INSTALL_DIR}; chmod 755 .; chmod +x ./cloudflared;
-                echo "${currentToken}" > ${CLOUDFLARE_CONFIG.TOKEN_FILE};
-                TOKEN=\$(cat ${CLOUDFLARE_CONFIG.TOKEN_FILE});
-                nohup ./cloudflared tunnel run --token "\$TOKEN" --config "${CLOUDFLARE_CONFIG.CONFIG_FILE}" > ${CLOUDFLARE_CONFIG.LOG_FILE} 2>&1 &
-                echo $! > ${CLOUDFLARE_CONFIG.PID_FILE}; sleep 1
+                cd ${CLOUDFLARE_CONFIG.INSTALL_DIR}
+                chmod 755 .
+                chmod +x ./cloudflared
+                nohup ./cloudflared tunnel --config "${CLOUDFLARE_CONFIG.CONFIG_FILE}" run --token-file "${CLOUDFLARE_CONFIG.TOKEN_FILE}" > ${CLOUDFLARE_CONFIG.LOG_FILE} 2>&1 &
+                echo $! > ${CLOUDFLARE_CONFIG.PID_FILE}
+                sleep 2
             `);
             ToastManager.loading("配置自启动...");
-            const bootCmd = `cd ${CLOUDFLARE_CONFIG.INSTALL_DIR} && TOKEN=\$(cat ${CLOUDFLARE_CONFIG.TOKEN_FILE}) && nohup ./cloudflared tunnel run --token "\$TOKEN" --config ${CLOUDFLARE_CONFIG.CONFIG_FILE} > ${CLOUDFLARE_CONFIG.LOG_FILE} 2>&1 &`;
-            await runShellWithRoot(`touch ${CLOUDFLARE_CONFIG.BOOT_SCRIPT_PATH}; chmod 777 ${CLOUDFLARE_CONFIG.BOOT_SCRIPT_PATH}; sed -i '/cloudflared tunnel/d' ${CLOUDFLARE_CONFIG.BOOT_SCRIPT_PATH}; echo "${bootCmd}" >> ${CLOUDFLARE_CONFIG.BOOT_SCRIPT_PATH}`);
+            const bootCmd = `cd ${CLOUDFLARE_CONFIG.INSTALL_DIR} && nohup ./cloudflared tunnel --config ${CLOUDFLARE_CONFIG.CONFIG_FILE} run --token-file ${CLOUDFLARE_CONFIG.TOKEN_FILE} > ${CLOUDFLARE_CONFIG.LOG_FILE} 2>&1 &`;
+            await runShellWithRoot(`touch ${CLOUDFLARE_CONFIG.BOOT_SCRIPT_PATH}; chmod 777 ${CLOUDFLARE_CONFIG.BOOT_SCRIPT_PATH}; sed -i '/cloudflared tunnel/d' ${CLOUDFLARE_CONFIG.BOOT_SCRIPT_PATH}; echo '${bootCmd}' >> ${CLOUDFLARE_CONFIG.BOOT_SCRIPT_PATH}`);
             const pr = await runShellWithRoot(`cat ${CLOUDFLARE_CONFIG.PID_FILE}`); if (pr.success && pr.content) cloudflaredProcessId = pr.content.trim();
             ToastManager.loading("验证...");
             let v = false;
@@ -425,8 +436,17 @@
             ToastManager.loading("停止服务..."); await stopService();
             ToastManager.loading("重新启动...");
             if (!(await writeConfigYml())) throw new Error("config.yml失败");
-            const tk = currentToken || (await runShellWithRoot(`cat ${CLOUDFLARE_CONFIG.TOKEN_FILE} 2>/dev/null`)).content || "";
-            const sr = await runShellWithRoot(`cd ${CLOUDFLARE_CONFIG.INSTALL_DIR}; chmod +x ./cloudflared; echo "${tk}" > ${CLOUDFLARE_CONFIG.TOKEN_FILE}; TOKEN=\$(cat ${CLOUDFLARE_CONFIG.TOKEN_FILE}); nohup ./cloudflared tunnel run --token "\$TOKEN" --config "${CLOUDFLARE_CONFIG.CONFIG_FILE}" > ${CLOUDFLARE_CONFIG.LOG_FILE} 2>&1 &; echo $! > ${CLOUDFLARE_CONFIG.PID_FILE}`);
+            if (currentToken) {
+                let tb = "";
+                try { tb = btoa(unescape(encodeURIComponent(currentToken))); } catch (e) { tb = btoa(currentToken); }
+                await runShellWithRoot(`echo '${tb}' | base64 -d > ${CLOUDFLARE_CONFIG.TOKEN_FILE}; chmod 600 ${CLOUDFLARE_CONFIG.TOKEN_FILE}`);
+            }
+            const sr = await runShellWithRoot(`
+                cd ${CLOUDFLARE_CONFIG.INSTALL_DIR}
+                chmod +x ./cloudflared
+                nohup ./cloudflared tunnel --config "${CLOUDFLARE_CONFIG.CONFIG_FILE}" run --token-file "${CLOUDFLARE_CONFIG.TOKEN_FILE}" > ${CLOUDFLARE_CONFIG.LOG_FILE} 2>&1 &
+                echo $! > ${CLOUDFLARE_CONFIG.PID_FILE}
+            `);
             if (!sr.success) throw new Error(`重启失败: ${sr.content}`);
             ToastManager.loading("验证..."); await new Promise(r => setTimeout(r, 3000));
             const { running: rn, pid: rp } = await isServiceRunning(false);
