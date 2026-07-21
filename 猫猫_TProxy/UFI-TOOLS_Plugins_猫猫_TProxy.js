@@ -954,7 +954,181 @@ grep -qxF 'inotifyd /data/clash/Scripts/Clash.Inotify "/data/clash/Clash" >> /de
     mmBox.appendChild(uploadCoreInput);
     mmBox.appendChild(editBtn);
     mmBox.appendChild(subBtn); // 订阅链接
-    // 刷新订阅按钮
+    // 刷新订阅：整份覆盖 / 仅更新节点（保留规则）
+    const refreshProvidersOnly = async () => {
+      createToast('正在更新节点（保留现有配置）...', 'yellow');
+      // 1) 优先走 Mihomo API 更新各 proxy-provider（不改 config.yaml）
+      // 2) 失败则清理 provider 缓存后重启，强制重新拉取节点
+      const res = await runShellWithRoot(
+        `
+YQ="/data/clash/Tools/yq_linux_arm64"
+CFG="/data/clash/Proxy/config.yaml"
+CURL="/data/data/com.minikano.f50_sms/files/curl"
+[ -x "$CURL" ] || CURL="curl"
+
+urlencode() {
+  # 按字节百分号编码，兼容中文订阅源名称
+  printf %s "$1" | od -An -tx1 2>/dev/null | tr -d ' \\n' | sed 's/../%&/g' | tr 'a-f' 'A-F'
+}
+
+if [ ! -f "$CFG" ]; then echo "NO_CONFIG"; exit 0; fi
+if [ ! -f "$YQ" ]; then echo "NO_YQ"; exit 0; fi
+
+NAMES=$("$YQ" e '.proxy-providers | keys | .[]' "$CFG" 2>/dev/null)
+if [ -z "$NAMES" ]; then echo "NO_PROVIDERS"; exit 0; fi
+
+CTRL=$("$YQ" e '.external-controller // "127.0.0.1:9090"' "$CFG" 2>/dev/null | tr -d '"' | tr -d "'")
+SECRET=$("$YQ" e '.secret // ""' "$CFG" 2>/dev/null | tr -d '"' | tr -d "'")
+HOSTPORT=$(echo "$CTRL" | sed 's/^0\\.0\\.0\\.0/127.0.0.1/;s/^\\[::\\]/127.0.0.1/;s/^::/127.0.0.1/')
+# 同时尝试配置端口与常见端口（猫猫常用 7788）
+CANDIDATES="$HOSTPORT"
+echo "$HOSTPORT" | grep -q ':7788$' || CANDIDATES="$CANDIDATES 127.0.0.1:7788"
+echo "$HOSTPORT" | grep -q ':9090$' || CANDIDATES="$CANDIDATES 127.0.0.1:9090"
+
+call_put() {
+  _hp="$1"; _enc="$2"
+  if [ -n "$SECRET" ]; then
+    "$CURL" -s -o /dev/null -w "%{http_code}" -X PUT -H "Authorization: Bearer $SECRET" "http://$_hp/providers/proxies/$_enc" 2>/dev/null || echo 000
+  else
+    "$CURL" -s -o /dev/null -w "%{http_code}" -X PUT "http://$_hp/providers/proxies/$_enc" 2>/dev/null || echo 000
+  fi
+}
+
+: > /data/clash/Proxy/.provider_refresh_log
+echo "$NAMES" | while IFS= read -r name; do
+  [ -z "$name" ] && continue
+  ENC=$(urlencode "$name")
+  CODE=000
+  for HP in $CANDIDATES; do
+    CODE=$(call_put "$HP" "$ENC")
+    if [ "$CODE" = "204" ] || [ "$CODE" = "200" ] || [ "$CODE" = "201" ]; then
+      break
+    fi
+  done
+  if [ "$CODE" = "204" ] || [ "$CODE" = "200" ] || [ "$CODE" = "201" ]; then
+    echo "OK:$name" >> /data/clash/Proxy/.provider_refresh_log
+  else
+    echo "FAIL:$name:$CODE" >> /data/clash/Proxy/.provider_refresh_log
+  fi
+done
+
+# while 在管道子 shell 中，改用日志统计
+OK=$(grep -c '^OK:' /data/clash/Proxy/.provider_refresh_log 2>/dev/null || echo 0)
+FAIL=$(grep -c '^FAIL:' /data/clash/Proxy/.provider_refresh_log 2>/dev/null || echo 0)
+cat /data/clash/Proxy/.provider_refresh_log 2>/dev/null
+echo "RESULT:OK=$OK FAIL=$FAIL"
+        `,
+        120 * 1000,
+      );
+      if (!res.success) return createToast('更新节点失败！', 'red');
+      const out = (res.content || '').trim();
+      if (out.includes('NO_CONFIG')) return createToast('未找到配置文件', 'red');
+      if (out.includes('NO_YQ')) return createToast('未找到 yq 工具', 'red');
+      if (out.includes('NO_PROVIDERS')) {
+        return createToast(
+          '当前配置没有 proxy-providers，无法仅更新节点。\n请使用「整份配置重新刷新」，或上传带 proxy-providers 的配置（如 OneSmart）。',
+          'red',
+        );
+      }
+      const m = out.match(/RESULT:OK=(\d+)\s+FAIL=(\d+)/);
+      const ok = m ? Number(m[1]) : 0;
+      const fail = m ? Number(m[2]) : -1;
+      if (ok > 0 && fail === 0) {
+        createToast(`节点已更新（${ok} 个订阅源），配置与规则未改动`, 'green');
+        return;
+      }
+      if (ok > 0 && fail > 0) {
+        createToast(`部分订阅源更新成功（成功 ${ok}，失败 ${fail}），请查看面板或日志`, 'yellow');
+        return;
+      }
+      // API 失败兜底：清理 provider 缓存后重启，强制重新拉取
+      createToast('面板接口更新失败，尝试清理订阅缓存并重启...', 'yellow');
+      await runShellWithRoot(`
+YQ="/data/clash/Tools/yq_linux_arm64"
+CFG="/data/clash/Proxy/config.yaml"
+# 删除各 provider 的 path 缓存文件（若配置了 path）
+if [ -f "$YQ" ] && [ -f "$CFG" ]; then
+  "$YQ" e '.proxy-providers[].path // ""' "$CFG" 2>/dev/null | while IFS= read -r p; do
+    [ -z "$p" ] || [ "$p" = "null" ] && continue
+    case "$p" in
+      /*) rm -f "$p" 2>/dev/null ;;
+      *) rm -f "/data/clash/Proxy/$p" 2>/dev/null ;;
+    esac
+  done
+fi
+rm -f /data/clash/Proxy/*.cache 2>/dev/null
+rm -rf /data/clash/Proxy/providers /data/clash/Proxy/proxy_provider /data/clash/Proxy/proxy-providers 2>/dev/null
+true
+      `);
+      createToast('已清理订阅缓存，正在重启核心以拉取最新节点（config.yaml 未改动）...', 'green');
+      btn_restart.click();
+    };
+
+    const refreshFullConfig = async () => {
+      const saved = await runShellWithRoot(`cat /data/clash/Proxy/.sub_url 2>/dev/null`);
+      if (!saved.success || !saved.content) {
+        createToast('没有已保存的订阅，请先使用「订阅链接」添加', 'red');
+        return;
+      }
+      createToast('正在整份刷新订阅（将覆盖 config.yaml）...', 'yellow');
+      const b64 = btoa(unescape(encodeURIComponent(saved.content)));
+      const written = await runShellWithRoot(`
+        echo ${b64} | base64 -d > /data/clash/Proxy/config.yaml
+      `);
+      if (!written.success) return createToast('写入订阅失败！', 'red');
+      createToast('订阅已整份更新，正在重启核心...', 'green');
+      btn_restart.click();
+    };
+
+    const showRefreshSubDialog = async () => {
+      const rid = 'rs_' + createRandomString(4);
+      const { el, close } = createFixedToast(
+        rid,
+        `
+            <div style="pointer-events:all;width:88vw;max-width:520px;">
+                <div class="title" style="margin:0">刷新订阅</div>
+                <div style="margin:12px 0;font-size:.7rem;line-height:1.7;color:#ccc;">
+                  请选择刷新方式：
+                </div>
+                <div style="display:flex;flex-direction:column;gap:10px;margin:10px 0;font-size:.68rem;line-height:1.55;">
+                  <label style="display:flex;gap:8px;align-items:flex-start;padding:10px;border:1px solid #444;border-radius:8px;cursor:pointer;">
+                    <input type="radio" name="${rid}_mode" value="nodes" checked style="margin-top:3px;">
+                    <span>
+                      <b style="color:#0f0">仅更新节点（推荐）</b><br>
+                      保留现有 YAML 规则、策略组、DNS 等配置，仅拉取 proxy-providers 最新节点。<br>
+                      <span style="opacity:.8">适合 OneSmart 等带 proxy-providers 的完整配置。</span>
+                    </span>
+                  </label>
+                  <label style="display:flex;gap:8px;align-items:flex-start;padding:10px;border:1px solid #444;border-radius:8px;cursor:pointer;">
+                    <input type="radio" name="${rid}_mode" value="full" style="margin-top:3px;">
+                    <span>
+                      <b style="color:#fa0">整份配置重新刷新</b><br>
+                      用已保存的订阅内容覆盖整个 config.yaml。<br>
+                      <span style="opacity:.8;color:#f88">会冲掉当前规则与自定义配置，请谨慎使用。</span>
+                    </span>
+                  </label>
+                </div>
+                <div style="text-align:right;display:flex;gap:8px;justify-content:flex-end;">
+                  <button id="${rid}_ok" style="font-size:.64rem;">确认刷新</button>
+                  <button id="${rid}_close" style="font-size:.64rem;">取消</button>
+                </div>
+            </div>
+        `,
+      );
+      el.querySelector(`#${rid}_close`).onclick = close;
+      el.querySelector(`#${rid}_ok`).onclick = async () => {
+        const mode =
+          el.querySelector(`input[name="${rid}_mode"]:checked`)?.value ||
+          'nodes';
+        close();
+        if (mode === 'full') {
+          await refreshFullConfig();
+        } else {
+          await refreshProvidersOnly();
+        }
+      };
+    };
+
     const refreshSubBtn = document.createElement('button');
     refreshSubBtn.textContent = '刷新订阅';
     refreshSubBtn.onclick = async () => {
@@ -966,19 +1140,7 @@ grep -qxF 'inotifyd /data/clash/Scripts/Clash.Inotify "/data/clash/Clash" >> /de
         createToast('没有安装猫猫，请先安装！', 'red');
         return;
       }
-      const saved = await runShellWithRoot(`cat /data/clash/Proxy/.sub_url 2>/dev/null`);
-      if (!saved.success || !saved.content) {
-        createToast('没有已保存的订阅，请先使用「订阅链接」添加', 'red');
-        return;
-      }
-      createToast('正在刷新订阅...', 'yellow');
-      const b64 = btoa(unescape(encodeURIComponent(saved.content)));
-      const written = await runShellWithRoot(`
-        echo ${b64} | base64 -d > /data/clash/Proxy/config.yaml
-      `);
-      if (!written.success) return createToast('写入订阅失败！', 'red');
-      createToast('订阅已更新，正在重启核心...', 'green');
-      btn_restart.click();
+      await showRefreshSubDialog();
     };
     mmBox.appendChild(refreshSubBtn);
     mmBox.appendChild(uploadBtn);

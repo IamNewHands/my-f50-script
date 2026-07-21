@@ -9,7 +9,7 @@
 ├── 猫猫_TProxy/          # Clash/Mihomo 代理管理插件
 │   ├── README.md         # 插件详细说明
 │   ├── .gitignore        # Git 忽略配置
-│   └── UFI-TOOLS_Plugins_*.js  # UFI-TOOLS 插件脚本
+│   └── UFI-TOOLS_Plugins_猫猫_TProxy.js  # UFI-TOOLS 插件脚本
 ├── CloudFlare_Tunnel/    # CloudFlare Tunnel 内网穿透插件
 │   ├── README.md         # 插件详细说明
 │   ├── .gitignore        # Git 忽略配置
