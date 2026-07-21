@@ -147,6 +147,56 @@
         return stopRes.success;
     };
 
+    /** 停止隧道（保留安装与配置，可选关闭自启动） */
+    const stopCloudflared = async () => {
+        if (!(await validateAdvancedPermission())) return;
+        try {
+            const { running, pid } = await isServiceRunning(false);
+            if (!running) {
+                ToastManager.warning("服务当前未运行\n如需禁止开机自启，请点「禁用自启动」");
+                return;
+            }
+            ToastManager.loading("正在停止隧道服务...");
+            const ok = await stopService();
+            if (!ok) throw new Error("停止命令执行失败");
+            await new Promise(r => setTimeout(r, 1500));
+            const { running: still } = await isServiceRunning(false);
+            if (still) {
+                await runShellWithRoot(`killall -9 cloudflared 2>/dev/null; sleep 1; rm -f ${CLOUDFLARE_CONFIG.PID_FILE}`);
+            }
+            const { running: final } = await isServiceRunning(false);
+            cloudflaredProcessId = null;
+            statusCache = { data: null, timestamp: 0, ttl: 5000 };
+            if (final) {
+                ToastManager.error("停止失败，进程仍在运行，请查看日志");
+            } else {
+                ToastManager.success(`隧道已关闭 (原 PID: ${pid || "未知"})\n安装与配置已保留，可随时「启动服务」\n注意：若已配置开机自启，设备重启后仍会自动拉起\n如需彻底不自启 → 点「禁用自启动」`);
+            }
+        } catch (e) { ToastManager.error(`停止失败: ${e.message}`); }
+    };
+
+    /** 仅移除开机自启动，不杀当前进程（可与停止配合使用） */
+    const disableAutostart = async () => {
+        if (!(await validateAdvancedPermission())) return;
+        try {
+            ToastManager.loading("正在禁用自启动...");
+            const res = await runShellWithRoot(`
+                if [ -f ${CLOUDFLARE_CONFIG.BOOT_SCRIPT_PATH} ]; then
+                    sed -i '/cloudflared tunnel/d' ${CLOUDFLARE_CONFIG.BOOT_SCRIPT_PATH}
+                    echo "OK"
+                else
+                    echo "NO_BOOT_SCRIPT"
+                fi
+            `);
+            if (!res.success) throw new Error("写入自启动脚本失败");
+            if (res.content.includes("NO_BOOT_SCRIPT")) {
+                ToastManager.info("未找到自启动脚本，无需处理");
+            } else {
+                ToastManager.success("已禁用开机自启动\n设备重启后不会再自动启动隧道\n当前运行中的进程不受影响（需另点「停止服务」）");
+            }
+        } catch (e) { ToastManager.error(`禁用自启动失败: ${e.message}`); }
+    };
+
     // ==================== Token 提取 ====================
     const extractToken = (() => {
         const TOKEN_REGEX = /^[A-Za-z0-9+/=]+$/;
@@ -748,7 +798,9 @@
     const buttons = [
         createButton('安装 Tunnel', createAsyncWrapper(installCloudflared)),
         createButton('启动服务', createAsyncWrapper(startCloudflared)),
+        createButton('停止服务', createAsyncWrapper(stopCloudflared)),
         createButton('重启服务', createAsyncWrapper(restartCloudflared)),
+        createButton('禁用自启动', createAsyncWrapper(disableAutostart)),
         createButton('检查状态', createAsyncWrapper(checkStatus)),
         createButton('查看日志', createAsyncWrapper(viewLogs)),
         createButton('卸载', createAsyncWrapper(uninstallCloudflared), true),
