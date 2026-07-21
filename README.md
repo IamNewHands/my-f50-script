@@ -14,6 +14,7 @@
 │   ├── README.md         # 插件详细说明
 │   ├── .gitignore        # Git 忽略配置
 │   └── UFI-TOOLS_Plugins_CloudFlare_Tunnel.js  # UFI-TOOLS 插件脚本
+├── MihomoPro_Config.yaml # Mihomo 完整配置模板（proxy-providers，需自行填写订阅）
 └── README.md             # 本文件
 ```
 
