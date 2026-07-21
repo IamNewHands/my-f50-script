@@ -392,11 +392,11 @@
             ToastManager.loading("启动服务...");
             await runShellWithRoot(`
                 cd ${CLOUDFLARE_CONFIG.INSTALL_DIR}; chmod 755 .; chmod +x ./cloudflared;
-                nohup ./cloudflared tunnel run --token "${currentToken}" --config "${CLOUDFLARE_CONFIG.CONFIG_FILE}" > ${CLOUDFLARE_CONFIG.LOG_FILE} 2>&1 &
+                TUNNEL_TOKEN="${currentToken}" nohup ./cloudflared tunnel run --config "${CLOUDFLARE_CONFIG.CONFIG_FILE}" > ${CLOUDFLARE_CONFIG.LOG_FILE} 2>&1 &
                 echo $! > ${CLOUDFLARE_CONFIG.PID_FILE}; sleep 1
             `);
             ToastManager.loading("配置自启动...");
-            const bootCmd = `cd ${CLOUDFLARE_CONFIG.INSTALL_DIR} && nohup ./cloudflared tunnel run --token "${currentToken}" --config ${CLOUDFLARE_CONFIG.CONFIG_FILE} > ${CLOUDFLARE_CONFIG.LOG_FILE} 2>&1 &`;
+            const bootCmd = `cd ${CLOUDFLARE_CONFIG.INSTALL_DIR} && TUNNEL_TOKEN="${currentToken}" nohup ./cloudflared tunnel run --config ${CLOUDFLARE_CONFIG.CONFIG_FILE} > ${CLOUDFLARE_CONFIG.LOG_FILE} 2>&1 &`;
             await runShellWithRoot(`touch ${CLOUDFLARE_CONFIG.BOOT_SCRIPT_PATH}; chmod 777 ${CLOUDFLARE_CONFIG.BOOT_SCRIPT_PATH}; sed -i '/cloudflared tunnel/d' ${CLOUDFLARE_CONFIG.BOOT_SCRIPT_PATH}; echo "${bootCmd}" >> ${CLOUDFLARE_CONFIG.BOOT_SCRIPT_PATH}`);
             const pr = await runShellWithRoot(`cat ${CLOUDFLARE_CONFIG.PID_FILE}`); if (pr.success && pr.content) cloudflaredProcessId = pr.content.trim();
             ToastManager.loading("验证...");
@@ -424,7 +424,7 @@
             ToastManager.loading("重新启动...");
             if (!(await writeConfigYml())) throw new Error("config.yml失败");
             const tk = currentToken || (await runShellWithRoot(`cat ${CLOUDFLARE_CONFIG.TOKEN_FILE} 2>/dev/null`)).content || "";
-            const sr = await runShellWithRoot(`cd ${CLOUDFLARE_CONFIG.INSTALL_DIR}; chmod +x ./cloudflared; nohup ./cloudflared tunnel run --token "${tk}" --config "${CLOUDFLARE_CONFIG.CONFIG_FILE}" > ${CLOUDFLARE_CONFIG.LOG_FILE} 2>&1 &; echo $! > ${CLOUDFLARE_CONFIG.PID_FILE}`);
+            const sr = await runShellWithRoot(`cd ${CLOUDFLARE_CONFIG.INSTALL_DIR}; chmod +x ./cloudflared; TUNNEL_TOKEN="${tk}" nohup ./cloudflared tunnel run --config "${CLOUDFLARE_CONFIG.CONFIG_FILE}" > ${CLOUDFLARE_CONFIG.LOG_FILE} 2>&1 &; echo $! > ${CLOUDFLARE_CONFIG.PID_FILE}`);
             if (!sr.success) throw new Error(`重启失败: ${sr.content}`);
             ToastManager.loading("验证..."); await new Promise(r => setTimeout(r, 3000));
             const { running: rn, pid: rp } = await isServiceRunning(false);
