@@ -16,6 +16,9 @@ F50 / UFI-TOOLS 插件与配置模板集合。
 ├── CloudFlare_Tunnel/        # CloudFlare Tunnel 内网穿透插件
 │   ├── README.md             # 含 Access 登录验证、启停说明
 │   └── UFI-TOOLS_Plugins_CloudFlare_Tunnel.js
+├── openlist/                 # OpenList 文件列表管理插件
+│   ├── README.md
+│   └── UFI-TOOLS_Plugins_OpenList.js
 ├── MihomoPro_Config.yaml     # Mihomo 配置模板（订阅地址请自行填写）
 └── README.md
 ```
@@ -28,6 +31,7 @@ F50 / UFI-TOOLS 插件与配置模板集合。
 |------|------|----------|
 | [猫猫_TProxy](./猫猫_TProxy/README.md) | `猫猫_TProxy/` | Clash/Mihomo 管理；刷新订阅支持「仅更新节点 / 整份覆盖」等 |
 | [CloudFlare_Tunnel](./CloudFlare_Tunnel/README.md) | `CloudFlare_Tunnel/` | 公网 / WARP 私网 / 双模式；安装·启停·自启·状态·日志 |
+| [OpenList](./openlist/README.md) | `openlist/` | 一键安装/启停 OpenList 文件列表；内嵌 Web UI 面板；快捷路径收藏；日志实时查看与导出 |
 
 ### CloudFlare Tunnel 要点
 
@@ -44,6 +48,16 @@ F50 / UFI-TOOLS 插件与配置模板集合。
 | **整份配置重新刷新** | 用订阅覆盖配置，可能冲掉自定义规则 |
 
 详见 [猫猫_TProxy/README.md](./猫猫_TProxy/README.md)。
+
+### OpenList 要点
+
+- **安装**：点击「安装OpenList」自动下载解压并设置开机自启，默认密码 `admin`
+- **Web 界面**：展开面板即可在内嵌 iframe 中操作，或点击「新标签页打开」
+- **快捷路径**：收藏常用路径（如 `/data/clash/Proxy/WebUI/zashboard`），点击即跳转
+- **日志**：点击「查看日志」实时刷新（1.5 秒间隔），支持暂停/继续；也可点击「导出运行日志」下载完整文件
+- 安装前需确保已开启「高级功能」（Root），且设备可访问互联网
+
+详见 [openlist/README.md](./openlist/README.md)。
 
 ---
 
