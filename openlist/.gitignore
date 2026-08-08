@@ -1,0 +1,11 @@
+# 忽略临时文件
+*.swp
+*.bak
+*~
+.DS_Store
+Thumbs.db
+
+# 切勿提交设备导出的敏感配置
+*.log
+.env
+.env.*
