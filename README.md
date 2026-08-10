@@ -19,6 +19,9 @@ F50 / UFI-TOOLS 插件与配置模板集合。
 ├── openlist/                 # OpenList 文件列表管理插件
 │   ├── README.md
 │   └── UFI-TOOLS_Plugins_OpenList.js
+├── APK安装器/                # APK 安装 / 应用卸载插件
+│   ├── README.md
+│   └── UFI-TOOLS_Plugins_APK安装器.js
 ├── MihomoPro_Config.yaml     # Mihomo 配置模板（订阅地址请自行填写）
 └── README.md
 ```
@@ -32,6 +35,7 @@ F50 / UFI-TOOLS 插件与配置模板集合。
 | [猫猫_TProxy](./猫猫_TProxy/README.md) | `猫猫_TProxy/` | Clash/Mihomo 管理；刷新订阅支持「仅更新节点 / 整份覆盖」等 |
 | [CloudFlare_Tunnel](./CloudFlare_Tunnel/README.md) | `CloudFlare_Tunnel/` | 公网 / WARP 私网 / 双模式；安装·启停·自启·状态·日志 |
 | [OpenList](./openlist/README.md) | `openlist/` | 一键安装/启停 OpenList 文件列表；内嵌 Web UI 面板；快捷路径收藏；日志实时查看与导出 |
+| [APK安装器](./APK安装器/README.md) | `APK安装器/` | 面板内安装 APK（上传 → pm install）；列出/卸载全部第三方应用，带分页与进度提示 |
 
 ### CloudFlare Tunnel 要点
 
@@ -58,6 +62,15 @@ F50 / UFI-TOOLS 插件与配置模板集合。
 - 安装前需确保已开启「高级功能」（Root），且设备可访问互联网
 
 详见 [openlist/README.md](./openlist/README.md)。
+
+### APK安装器 要点
+
+- **安装 APK**：点击「📲 安装 APK」选择本机 `.apk` 文件，自动上传到设备并 `pm install -r`（覆盖安装），完成后自动清理临时文件
+- **卸载应用**：列表只显示**第三方应用**包名（`pm list packages -3`），每页 10 条，卸载有二次确认
+- **环境自检**：未开「高级功能」（Root）或非 Android 环境时插件拒绝加载并给出提示
+- **刷新列表**：带实时进度提示（扫描数量 / 百分比）
+
+详见 [APK安装器/README.md](./APK安装器/README.md)。
 
 ---
 
