@@ -324,52 +324,80 @@
         `);
       if (!res2.success) return createToast('解压猫猫文件出错!', 'red');
 
-      // 注入自定义规则合并逻辑
+      // 注入自定义规则合并逻辑（适配新版 Go 内核 clashctl，不依赖 main.sh/vi_yaml.sh）
       await runShellWithRoot(`
         cat > /data/clash/Scripts/merge_custom_rules.sh << 'MERGESHEOF'
 #!/system/bin/sh
-# 注意：此脚本被 main.sh 以 . 方式 source 调用，只能用 return 不能用 exit！
-# 使用 awk/sed 做文本级操作，避免 yq eval -i 破坏 YAML 锚点和合并标签
-. /data/clash/Scripts/vi_yaml.sh 2>/dev/null
+# 自定义规则合并脚本（适配新版 Go 内核 clashctl，4 空格缩进 config.yaml）
+# 独立可执行，不依赖 main.sh/vi_yaml.sh。每次内核启动前由 Clash.Service 调用。
+# 注意：此脚本被 source 时只能用 return，直接执行时用 exit。
+
+Module_dir=/data/clash
+CLASH_CONFIG="$Module_dir/Proxy/config.yaml"
+yq_path="$Module_dir/Tools/yq_linux_arm64"
+
 CUSTOM_RULES_FILE="$Module_dir/Proxy/custom_rules.yaml"
 COUNTER_FILE="$Module_dir/Proxy/.custom_rules_count"
-YQ="$yq_path"
 CFG="$CLASH_CONFIG"
 
-# 步骤1：删除上次合并的 PREV 条规则（文本级 awk 操作）
+# 步骤1：删除上次合并的 PREV 条规则（文本级 awk 操作，兼容任意空格缩进）
 if [ -f "$COUNTER_FILE" ]; then
-    PREV=$(cat "$COUNTER_FILE")
+    PREV=$(cat "$COUNTER_FILE" 2>/dev/null)
     if [ -n "$PREV" ] && [ "$PREV" -gt 0 ] 2>/dev/null; then
-        (awk -v n="$PREV" '
+        awk -v n="$PREV" '
           /^rules:/   { in_rules=1; print; next }
-          in_rules && /^  - / { if (++cnt <= n) next }
-          in_rules && !/^  - / && !/^[[:space:]]*$/ { in_rules=0 }
+          in_rules && /^[[:space:]]*- / { if (++cnt <= n) next }
+          in_rules && !/^[[:space:]]*- / && !/^[[:space:]]*$/ { in_rules=0 }
           { print }
-        ' "$CFG" > "$CFG.tmp" 2>/dev/null && mv "$CFG.tmp" "$CFG")
+        ' "$CFG" > "$CFG.tmp" 2>/dev/null && mv "$CFG.tmp" "$CFG"
     fi
 fi
 
 if [ ! -f "$CUSTOM_RULES_FILE" ] || [ ! -s "$CUSTOM_RULES_FILE" ]; then
     rm -f "$COUNTER_FILE"
-    return 0
+    return 0 2>/dev/null || exit 0
 fi
 
-# 步骤2：用 sed r 命令在 rules: 后插入规则
-grep -v '^\\s*#' "$CUSTOM_RULES_FILE" | grep -v '^\\s*$' | sed 's/^[[:space:]]*//;s/[[:space:]]*$//;s/^/  - /' > "$CFG.tmp_rules" 2>/dev/null
+# 步骤2：用 sed r 命令在 rules: 后插入规则（适配 4 空格缩进）
+grep -v '^\\s*#' "$CUSTOM_RULES_FILE" | grep -v '^\\s*$' | sed 's/^[[:space:]]*//;s/[[:space:]]*$//;s/^/    - /' > "$CFG.tmp_rules" 2>/dev/null
 
 COUNT=$(wc -l < "$CFG.tmp_rules" 2>/dev/null || echo 0)
 if [ "$COUNT" -eq 0 ]; then
     rm -f "$COUNTER_FILE" "$CFG.tmp_rules"
-    return 0
+    return 0 2>/dev/null || exit 0
 fi
 
 sed -i '/^rules:/r '"$CFG.tmp_rules" "$CFG" 2>/dev/null
 rm -f "$CFG.tmp_rules"
 echo "$COUNT" > "$COUNTER_FILE"
+return 0 2>/dev/null || exit 0
 MERGESHEOF
         chmod 755 /data/clash/Scripts/merge_custom_rules.sh
-        grep -q 'merge_custom_rules' /data/clash/Scripts/main.sh || \
-          sed -i '/^        ckyaml$/a\\        . /data/clash/Scripts/merge_custom_rules.sh 2>/dev/null' /data/clash/Scripts/main.sh
+        # 新版 Go 内核没有 main.sh，改为在 Clash.Service 的 start 前合并规则（整体重写，避免转义问题）
+        grep -q 'merge_custom_rules' /data/clash/Scripts/Clash.Service || \
+          cat > /data/clash/Scripts/Clash.Service << 'EOSERVEOF'
+#!/system/bin/sh
+# 兼容旧入口；配置、订阅、YAML 与启停逻辑均由 Go 程序执行。
+case "$(getprop ro.product.cpu.abi 2>/dev/null)" in
+  arm64-v8a) binary=/data/clash/Scripts/clashctl_arm64 ;;
+  armeabi-v7a|armeabi) binary=/data/clash/Scripts/clashctl_armv7 ;;
+  *) binary=/data/clash/Scripts/clashctl ;;
+esac
+
+if [ ! -x "$binary" ]; then
+  echo "找不到适用于当前架构的 clashctl: $binary"
+  exit 1
+fi
+
+# 启动前合并自定义规则（适配新版 Go 内核，不依赖 main.sh）
+if [ "$1" = "start" ]; then
+  [ -f /data/clash/Scripts/merge_custom_rules.sh ] && \
+    sh /data/clash/Scripts/merge_custom_rules.sh
+fi
+
+exec "$binary" "$@"
+EOSERVEOF
+        chmod 755 /data/clash/Scripts/Clash.Service
       `);
 
       createToast('检查依赖文件，可能需要一点时间...');
