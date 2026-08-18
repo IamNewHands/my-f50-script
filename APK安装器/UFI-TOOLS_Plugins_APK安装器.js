@@ -8,6 +8,29 @@
     // ---------- 全局辅助函数 ----------
     const wait = (ms = 100) => new Promise(resolve => setTimeout(resolve, ms));
 
+    // 带重试的 fetch：针对瞬时网络错误（502/503/504）或网络抖动进行重试
+    const fetchWithRetry = async (url, options, retries = 2, baseDelayMs = 400) => {
+        const isTransient = (status) => status === 502 || status === 503 || status === 504;
+        let lastErr = null;
+        for (let attempt = 0; attempt <= retries; attempt++) {
+            try {
+                const res = await fetch(url, options);
+                if (res.ok || !isTransient(res.status)) {
+                    return res;
+                }
+                lastErr = new Error(`HTTP ${res.status}`);
+            } catch (err) {
+                lastErr = err;
+            }
+            if (attempt < retries) {
+                const delay = baseDelayMs * (attempt + 1); // 400ms, 800ms
+                console.warn(`上传失败（第 ${attempt + 1} 次），${delay}ms 后重试...`, lastErr?.message);
+                await wait(delay);
+            }
+        }
+        throw lastErr || new Error("上传失败");
+    };
+
     // 使用 root 权限检查是否为 Android 环境
     const isAndroidEnvironment = async () => {
         try {
@@ -86,9 +109,9 @@
         }
         const formData = new FormData();
         formData.append("file", file);
-        let uploadRes;
+        let destPath = "";
         try {
-            uploadRes = await fetch(`${KANO_baseURL}/upload_img`, {
+            const uploadRes = await fetchWithRetry(`${KANO_baseURL}/upload_img`, {
                 method: "POST",
                 headers: common_headers,
                 body: formData,
@@ -97,15 +120,21 @@
             if (!json.url) {
                 throw new Error(json.error || "上传失败");
             }
-            const tempPath = `/data/data/com.minikano.f50_sms/files${json.url}`;
-            const destPath = `/data/local/tmp/${file.name.replace(/[^a-zA-Z0-9._-]/g, "_")}`;
+            // 路径安全校验：url 必须是 app 数据目录下的普通文件，防止 ../ 逃逸
+            const uploaded = String(json.url);
+            if (!uploaded.startsWith("/")) {
+                throw new Error("上传返回路径异常");
+            }
+            const cleanUrl = uploaded.replace(/\/+/g, "/").replace(/\.\.\//g, "");
+            const tempPath = `/data/data/com.minikano.f50_sms/files${cleanUrl}`;
+            destPath = `/data/local/tmp/${file.name.replace(/[^a-zA-Z0-9._-]/g, "_")}`;
             const moveRes = await runShellWithRoot(`mv ${tempPath} ${destPath} && chmod 644 ${destPath}`, 10000);
             if (!moveRes.success) {
                 throw new Error("移动文件失败");
             }
             createToast("正在安装 APK，请稍候...", "pink");
-            const installRes = await runShellWithRoot(`pm install -r ${destPath}`, 120000);
-            await runShellWithRoot(`rm -f ${destPath}`, 5000);
+            // -r 覆盖安装，-d 允许版本降级
+            const installRes = await runShellWithRoot(`pm install -r -d ${destPath}`, 120000);
             if (installRes.success && (installRes.content.includes("Success") || installRes.content.includes("成功"))) {
                 createToast("安装成功！", "green");
                 return true;
@@ -117,6 +146,11 @@
             console.error(err);
             createToast(`安装出错: ${err.message || "未知错误"}`, "red");
             return false;
+        } finally {
+            // 无论成功失败都清理临时文件，避免残留
+            if (destPath) {
+                await runShellWithRoot(`rm -f ${destPath}`, 5000);
+            }
         }
     };
 
