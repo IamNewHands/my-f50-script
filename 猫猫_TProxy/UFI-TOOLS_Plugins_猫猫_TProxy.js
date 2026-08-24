@@ -1308,36 +1308,45 @@ true
       }
     });
     // 修复面板路径按钮：将 WebUI/zashboard/zashboard/ 嵌套文件移到 WebUI/zashboard/
-    const fixPanelBtn = document.createElement('button');
-    fixPanelBtn.textContent = '修复面板路径';
-    fixPanelBtn.onclick = async () => {
-      if (!(await checkAdvanceFunc())) {
-        createToast('没有开启高级功能，无法使用！', 'red');
-        return;
-      }
-      if (!(await checkIsInstalled())) {
-        createToast('没有安装猫猫，请先安装！', 'red');
-        return;
-      }
-      const res = await runShellWithRoot(`
-        ZD=/data/clash/Proxy/WebUI/zashboard
-        if [ -d "$ZD/zashboard" ]; then
-          mv "$ZD/zashboard/"* "$ZD/" 2>/dev/null
-          rmdir "$ZD/zashboard" 2>/dev/null
-          echo "DONE"
-        else
-          echo "NO_NESTED"
-        fi
-      `, 30000);
-      if (res.content && res.content.includes('DONE')) {
-        createToast('面板文件已迁移', 'green');
-      } else if (res.content && res.content.includes('NO_NESTED')) {
-        createToast('未检测到嵌套目录，无需修复', 'yellow');
-      } else {
-        createToast('迁移失败', 'red');
-      }
-    };
-    mmBox.appendChild(fixPanelBtn);
+   const fixPanelBtn = document.createElement('button');
+fixPanelBtn.textContent = '修复面板路径';
+fixPanelBtn.onclick = async () => {
+  if (!(await checkAdvanceFunc())) {
+    createToast('没有开启高级功能，无法使用！', 'red');
+    return;
+  }
+  if (!(await checkIsInstalled())) {
+    createToast('没有安装猫猫，请先安装！', 'red');
+    return;
+  }
+  const res = await runShellWithRoot(`
+    ZD=/data/clash/Proxy/WebUI/zashboard
+    if [ -d "$ZD/zashboard" ]; then
+      # 1. 删除上一层 zashboard/ 目录下的所有内容（排除 zashboard 子文件夹）
+      find "$ZD" -mindepth 1 -maxdepth 1 ! -name "zashboard" -exec rm -rf {} + 2>/dev/null
+      
+      # 2. 移动嵌套的 zashboard/zashboard/ 下的所有内容到上层
+      mv "$ZD/zashboard/"* "$ZD/" 2>/dev/null
+      mv "$ZD/zashboard/".* "$ZD/" 2>/dev/null  # 移动隐藏文件
+      
+      # 3. 删除空的嵌套目录
+      rmdir "$ZD/zashboard" 2>/dev/null || rm -rf "$ZD/zashboard" 2>/dev/null
+      
+      echo "DONE"
+    else
+      echo "NO_NESTED"
+    fi
+  `, 30000);
+  
+  if (res.content && res.content.includes('DONE')) {
+    createToast('面板文件已修复', 'green');
+  } else if (res.content && res.content.includes('NO_NESTED')) {
+    createToast('未检测到嵌套目录，无需修复', 'yellow');
+  } else {
+    createToast('修复失败', 'red');
+  }
+};
+mmBox.appendChild(fixPanelBtn);
     await isMMRunning();
   })();
 })();
