@@ -199,7 +199,6 @@ proxy-groups:
         - 全球手动
         - 直接连接
       type: select
-    # ===== 全球分组（新增） =====
     - empty-fallback: REJECT
       filter: ^(?!.*(DIRECT|吹雪|皮卡丘|直接连接|群|邀请|返利|循环|官网|客服|网站|网址|获取|订阅|流量|到期|机场|下次|版本|官址|备用|过期|已用|联系|邮箱|工单|贩卖|通知|倒卖|防止|国内|地址|频道|无法|说明|使用|提示|特别|访问|支持|教程|关注|更新|作者|加入|USE|USED|TOTAL|EXPIRE|EMAIL|Panel|Channel|Author))
       hidden: true
@@ -244,7 +243,7 @@ proxy-groups:
         - 欧盟策略
         - 冷门自选
         - 直接连接
-      type: select   
+      type: select
     - icon: https://github.com/Koolson/Qure/raw/master/IconSet/Color/Global.png
       name: 国外流量
       proxies:
@@ -490,7 +489,7 @@ proxy-groups:
         - 全球手动
         - 直接连接
       type: select
-    - icon: https://github.com/Koolson/Qure/raw/master/IconSet/Color/Microsoft.png
+    - icon: https://github.com/Koolson/Qure/raw/master/IconSet/Color/GitHub.png
       name: Github
       proxies:
         - 默认代理
@@ -505,7 +504,7 @@ proxy-groups:
         - 全球手动
         - 直接连接
       type: select
-    - icon: https://github.com/Koolson/Qure/raw/master/IconSet/Color/GitHub.png
+    - icon: https://github.com/Koolson/Qure/raw/master/IconSet/Color/Microsoft.png
       name: 微软服务
       proxies:
         - 默认代理
@@ -897,241 +896,241 @@ rule-providers:
         format: mrs
         interval: 86400
         type: http
-        url: https://github.com/666OS/rules/raw/release/mihomo/domain/AI.mrs
+        url: https://cdn.jsdelivr.net/gh/666OS/rules@release/mihomo/domain/AI.mrs
     AIIP:
         behavior: ipcidr
         format: mrs
         interval: 86400
         type: http
-        url: https://github.com/666OS/rules/raw/release/mihomo/ip/AI.mrs
+        url: https://cdn.jsdelivr.net/gh/666OS/rules@release/mihomo/ip/AI.mrs
     Advertising:
         behavior: domain
         format: mrs
         interval: 86400
         type: http
-        url: https://github.com/666OS/rules/raw/release/mihomo/domain/Advertising.mrs
+        url: https://cdn.jsdelivr.net/gh/666OS/rules@release/mihomo/domain/Advertising.mrs
     AdvertisingIP:
         behavior: ipcidr
         format: mrs
         interval: 86400
         type: http
-        url: https://github.com/666OS/rules/raw/release/mihomo/ip/Advertising.mrs
+        url: https://cdn.jsdelivr.net/gh/666OS/rules@release/mihomo/ip/Advertising.mrs
     Apple:
         behavior: domain
         format: mrs
         interval: 86400
         type: http
-        url: https://github.com/666OS/rules/raw/release/mihomo/domain/Apple.mrs
+        url: https://cdn.jsdelivr.net/gh/666OS/rules@release/mihomo/domain/Apple.mrs
     AppleCN:
         behavior: domain
         format: mrs
         interval: 86400
         type: http
-        url: https://github.com/666OS/rules/raw/release/mihomo/domain/AppleCN.mrs
+        url: https://cdn.jsdelivr.net/gh/666OS/rules@release/mihomo/domain/AppleCN.mrs
     China:
         behavior: domain
         format: mrs
         interval: 86400
         type: http
-        url: https://github.com/666OS/rules/raw/release/mihomo/domain/China.mrs
+        url: https://cdn.jsdelivr.net/gh/666OS/rules@release/mihomo/domain/China.mrs
     ChinaIP:
         behavior: ipcidr
         format: mrs
         interval: 86400
         type: http
-        url: https://github.com/666OS/rules/raw/release/mihomo/ip/China.mrs
+        url: https://cdn.jsdelivr.net/gh/666OS/rules@release/mihomo/ip/China.mrs
     Crypto:
         behavior: domain
         format: mrs
         interval: 86400
         type: http
-        url: https://github.com/666OS/rules/raw/release/mihomo/domain/Crypto.mrs
+        url: https://cdn.jsdelivr.net/gh/666OS/rules@release/mihomo/domain/Crypto.mrs
     Direct:
         behavior: domain
         format: mrs
         interval: 86400
         type: http
-        url: https://github.com/666OS/rules/raw/release/mihomo/domain/Direct.mrs
+        url: https://cdn.jsdelivr.net/gh/666OS/rules@release/mihomo/domain/Direct.mrs
     Download:
         behavior: domain
         format: mrs
         interval: 86400
         type: http
-        url: https://github.com/666OS/rules/raw/release/mihomo/domain/Download.mrs
+        url: https://cdn.jsdelivr.net/gh/666OS/rules@release/mihomo/domain/Download.mrs
     Emby:
         behavior: domain
         format: mrs
         interval: 86400
         type: http
-        url: https://github.com/666OS/rules/raw/release/mihomo/domain/Emby.mrs
+        url: https://cdn.jsdelivr.net/gh/666OS/rules@release/mihomo/domain/Emby.mrs
     EmbyIP:
         behavior: ipcidr
         format: mrs
         interval: 86400
         type: http
-        url: https://github.com/666OS/rules/raw/release/mihomo/ip/Emby.mrs
+        url: https://cdn.jsdelivr.net/gh/666OS/rules@release/mihomo/ip/Emby.mrs
     Facebook:
         behavior: domain
         format: mrs
         interval: 86400
         type: http
-        url: https://github.com/666OS/rules/raw/release/mihomo/domain/Facebook.mrs
+        url: https://cdn.jsdelivr.net/gh/666OS/rules@release/mihomo/domain/Facebook.mrs
     FacebookIP:
         behavior: ipcidr
         format: mrs
         interval: 86400
         type: http
-        url: https://github.com/666OS/rules/raw/release/mihomo/ip/Facebook.mrs
+        url: https://cdn.jsdelivr.net/gh/666OS/rules@release/mihomo/ip/Facebook.mrs
     Games:
         behavior: domain
         format: mrs
         interval: 86400
         type: http
-        url: https://github.com/666OS/rules/raw/release/mihomo/domain/Games.mrs
-    Google:
-        behavior: domain
-        format: mrs
-        interval: 86400
-        type: http
-        url: https://github.com/666OS/rules/raw/release/mihomo/domain/Google.mrs
-    GoogleIP:
-        behavior: ipcidr
-        format: mrs
-        interval: 86400
-        type: http
-        url: https://github.com/666OS/rules/raw/release/mihomo/ip/Google.mrs
-    LocationDKS:
-        behavior: domain
-        format: mrs
-        interval: 86400
-        type: http
-        url: https://github.com/666OS/rules/raw/release/mihomo/domain/LocationDKS.mrs
+        url: https://cdn.jsdelivr.net/gh/666OS/rules@release/mihomo/domain/Games.mrs
     Github:
         behavior: domain
         format: mrs
         interval: 86400
         type: http
-        url: https://github.com/666OS/rules/raw/release/mihomo/domain/GitHub.mrs
+        url: https://cdn.jsdelivr.net/gh/666OS/rules@release/mihomo/domain/GitHub.mrs
+    Google:
+        behavior: domain
+        format: mrs
+        interval: 86400
+        type: http
+        url: https://cdn.jsdelivr.net/gh/666OS/rules@release/mihomo/domain/Google.mrs
+    GoogleIP:
+        behavior: ipcidr
+        format: mrs
+        interval: 86400
+        type: http
+        url: https://cdn.jsdelivr.net/gh/666OS/rules@release/mihomo/ip/Google.mrs
+    LocationDKS:
+        behavior: domain
+        format: mrs
+        interval: 86400
+        type: http
+        url: https://cdn.jsdelivr.net/gh/666OS/rules@release/mihomo/domain/LocationDKS.mrs
     Microsoft:
         behavior: domain
         format: mrs
         interval: 86400
         type: http
-        url: https://github.com/666OS/rules/raw/release/mihomo/domain/Microsoft.mrs
+        url: https://cdn.jsdelivr.net/gh/666OS/rules@release/mihomo/domain/Microsoft.mrs
     Netflix:
         behavior: domain
         format: mrs
         interval: 86400
         type: http
-        url: https://github.com/666OS/rules/raw/release/mihomo/domain/Netflix.mrs
+        url: https://cdn.jsdelivr.net/gh/666OS/rules@release/mihomo/domain/Netflix.mrs
     NetflixIP:
         behavior: ipcidr
         format: mrs
         interval: 86400
         type: http
-        url: https://github.com/666OS/rules/raw/release/mihomo/ip/Netflix.mrs
+        url: https://cdn.jsdelivr.net/gh/666OS/rules@release/mihomo/ip/Netflix.mrs
     NewsMedia:
         behavior: domain
         format: mrs
         interval: 86400
         type: http
-        url: https://github.com/666OS/rules/raw/release/mihomo/domain/NewsMedia.mrs
+        url: https://cdn.jsdelivr.net/gh/666OS/rules@release/mihomo/domain/NewsMedia.mrs
     Private:
         behavior: domain
         format: mrs
         interval: 86400
         type: http
-        url: https://github.com/666OS/rules/raw/release/mihomo/domain/Private.mrs
+        url: https://cdn.jsdelivr.net/gh/666OS/rules@release/mihomo/domain/Private.mrs
     PrivateIP:
         behavior: ipcidr
         format: mrs
         interval: 86400
         type: http
-        url: https://github.com/666OS/rules/raw/release/mihomo/ip/Private.mrs
+        url: https://cdn.jsdelivr.net/gh/666OS/rules@release/mihomo/ip/Private.mrs
     Proxy:
         behavior: domain
         format: mrs
         interval: 86400
         type: http
-        url: https://github.com/666OS/rules/raw/release/mihomo/domain/Proxy.mrs
+        url: https://cdn.jsdelivr.net/gh/666OS/rules@release/mihomo/domain/Proxy.mrs
     ProxyIP:
         behavior: ipcidr
         format: mrs
         interval: 86400
         type: http
-        url: https://github.com/666OS/rules/raw/release/mihomo/ip/Proxy.mrs
+        url: https://cdn.jsdelivr.net/gh/666OS/rules@release/mihomo/ip/Proxy.mrs
     SocialMedia:
         behavior: domain
         format: mrs
         interval: 86400
         type: http
-        url: https://github.com/666OS/rules/raw/release/mihomo/domain/SocialMedia.mrs
+        url: https://cdn.jsdelivr.net/gh/666OS/rules@release/mihomo/domain/SocialMedia.mrs
     SocialMediaIP:
         behavior: ipcidr
         format: mrs
         interval: 86400
         type: http
-        url: https://github.com/666OS/rules/raw/release/mihomo/ip/SocialMedia.mrs
+        url: https://cdn.jsdelivr.net/gh/666OS/rules@release/mihomo/ip/SocialMedia.mrs
     Speedtest:
         behavior: domain
         format: mrs
         interval: 86400
         type: http
-        url: https://github.com/666OS/rules/raw/release/mihomo/domain/Speedtest.mrs
+        url: https://cdn.jsdelivr.net/gh/666OS/rules@release/mihomo/domain/Speedtest.mrs
     Streaming:
         behavior: domain
         format: mrs
         interval: 86400
         type: http
-        url: https://github.com/666OS/rules/raw/release/mihomo/domain/Streaming.mrs
+        url: https://cdn.jsdelivr.net/gh/666OS/rules@release/mihomo/domain/Streaming.mrs
     StreamingIP:
         behavior: ipcidr
         format: mrs
         interval: 86400
         type: http
-        url: https://github.com/666OS/rules/raw/release/mihomo/ip/Streaming.mrs
+        url: https://cdn.jsdelivr.net/gh/666OS/rules@release/mihomo/ip/Streaming.mrs
     Telegram:
         behavior: domain
         format: mrs
         interval: 86400
         type: http
-        url: https://github.com/666OS/rules/raw/release/mihomo/domain/Telegram.mrs
+        url: https://cdn.jsdelivr.net/gh/666OS/rules@release/mihomo/domain/Telegram.mrs
     TelegramIP:
         behavior: ipcidr
         format: mrs
         interval: 86400
         type: http
-        url: https://github.com/666OS/rules/raw/release/mihomo/ip/Telegram.mrs
+        url: https://cdn.jsdelivr.net/gh/666OS/rules@release/mihomo/ip/Telegram.mrs
     Tracking:
         behavior: domain
         format: mrs
         interval: 86400
         type: http
-        url: https://github.com/666OS/rules/raw/release/mihomo/domain/Tracking.mrs
+        url: https://cdn.jsdelivr.net/gh/666OS/rules@release/mihomo/domain/Tracking.mrs
     Twitter:
         behavior: domain
         format: mrs
         interval: 86400
         type: http
-        url: https://github.com/666OS/rules/raw/release/mihomo/domain/Twitter.mrs
+        url: https://cdn.jsdelivr.net/gh/666OS/rules@release/mihomo/domain/Twitter.mrs
     XPTV:
         behavior: domain
         format: mrs
         interval: 86400
         type: http
-        url: https://github.com/666OS/rules/raw/release/mihomo/domain/XPTV.mrs
+        url: https://cdn.jsdelivr.net/gh/666OS/rules@release/mihomo/domain/XPTV.mrs
     XPTVIP:
         behavior: ipcidr
         format: mrs
         interval: 86400
         type: http
-        url: https://github.com/666OS/rules/raw/release/mihomo/ip/XPTV.mrs
+        url: https://cdn.jsdelivr.net/gh/666OS/rules@release/mihomo/ip/XPTV.mrs
     YouTube:
         behavior: domain
         format: mrs
         interval: 86400
         type: http
-        url: https://github.com/666OS/rules/raw/release/mihomo/domain/YouTube.mrs
+        url: https://cdn.jsdelivr.net/gh/666OS/rules@release/mihomo/domain/YouTube.mrs
     fakeip-filter:
         behavior: domain
         format: mrs
@@ -1140,6 +1139,10 @@ rule-providers:
         url: https://cdn.jsdelivr.net/gh/DustinWin/ruleset_geodata@mihomo-ruleset/fakeip-filter.mrs
 rules:
     - DOMAIN-SUFFIX,shinetechnology.com,直接连接
+    - DOMAIN-SUFFIX,baipiao6657.cc.cd,直接连接
+    - DOMAIN-SUFFIX,kaspersky.com,直接连接
+    - DOMAIN-SUFFIX,bing.com,直接连接
+    - DOMAIN-SUFFIX,nodeloc.com,直接连接
     - DOMAIN-SUFFIX,weixin.qq.com,直接连接
     - DOMAIN-SUFFIX,wechat.com,直接连接
     - RULE-SET,Tracking,REJECT
