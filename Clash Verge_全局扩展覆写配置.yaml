@@ -1,8 +1,9 @@
 # ==================== 锚点配置 ====================
-# 策略组类型模板 - 定义不同的策略组基础配置 
-BaseCH: &BaseCH {type: load-balance, interval: 3600, lazy: true, empty-fallback: REJECT, url: 'http://connectivitycheck.platform.hicloud.com/generate_204', strategy: consistent-hashing, hidden: true}
-BaseCR: &BaseCR {type: load-balance, interval: 3600, lazy: true, empty-fallback: REJECT, url: 'http://connectivitycheck.platform.hicloud.com/generate_204', strategy: round-robin, hidden: true}
-BaseUT: &BaseUT {type: url-test, interval: 3600, lazy: true, empty-fallback: REJECT, url: 'http://connectivitycheck.platform.hicloud.com/generate_204', hidden: true}
+# 策略组类型模板 - 定义不同的策略组基础配置
+BaseFB: &BaseFB {type: fallback, interval: 200, lazy: true, empty-fallback: REJECT, url: 'http://connectivitycheck.platform.hicloud.com/generate_204'}
+BaseCH: &BaseCH {type: load-balance, interval: 200, lazy: true, empty-fallback: REJECT, url: 'http://connectivitycheck.platform.hicloud.com/generate_204', strategy: consistent-hashing, hidden: true}
+BaseCR: &BaseCR {type: load-balance, interval: 200, lazy: true, empty-fallback: REJECT, url: 'http://connectivitycheck.platform.hicloud.com/generate_204', strategy: round-robin, hidden: true}
+BaseUT: &BaseUT {type: url-test, interval: 200, lazy: true, empty-fallback: REJECT, url: 'http://connectivitycheck.platform.hicloud.com/generate_204', hidden: true}
 
 # 节点筛选正则表达式 - 基于地理位置和关键词过滤
 FilterHK: &FilterHK '^(?=.*(?i)(港|🇭🇰|HK|Hong|HKG))(?!.*(排除1|排除2|5x)).*$'
@@ -13,12 +14,13 @@ FilterUS: &FilterUS '^(?=.*(?i)(美|🇺🇸|US|USA|SJC|JFK|LAX|ORD|ATL|DFW|SFO|
 FilterTW: &FilterTW '^(?=.*(?i)(台|🇹🇼|🇨🇼|TW|tai|TPE|TSA|KHH))(?!.*(排除1|排除2|5x)).*$'
 FilterEU: &FilterEU '^(?=.*(?i)(奥|比|保|克罗地亚|塞|捷|丹|爱沙|芬|法|德|希|匈|爱尔|意|拉|立|卢|马其顿|荷|波|葡|罗|斯洛伐|斯洛文|西|瑞|英|🇦🇹|🇧🇪|🇧🇬|🇭🇷|🇨🇾|🇨🇿|🇩🇰|🇪🇪|🇫🇮|🇫🇷|🇩🇪|🇬🇷|🇭🇺|🇮🇪|🇮🇹|🇱🇻|🇱🇹|🇱🇺|🇲🇰|🇳🇱|🇵🇱|🇵🇹|🇷🇴|🇸🇰|🇸🇮|🇪🇸|🇸🇪|🇬🇧|CDG|FRA|AMS|MAD|BCN|FCO|MUC|BRU))(?!.*(排除1|排除2|5x)).*$'
 FilterOT: &FilterOT '^(?!.*(DIRECT|直接连接|大号|美|港|坡|台|新|日|韩|奥|比|保|克罗地亚|塞|捷|丹|爱沙|芬|法|德|希|匈|爱尔|意|拉|立|卢|马其顿|荷|波|葡|罗|斯洛伐|斯洛文|西|瑞|英|🇭🇰|🇹🇼|🇨🇼|🇸🇬|🇯🇵|🇰🇷|🇺🇸|🇦🇹|🇧🇪|🇧🇬|🇭🇷|🇨🇾|🇨🇿|🇩🇰|🇪🇪|🇫🇮|🇫🇷|🇩🇪|🇬🇷|🇭🇺|🇮🇪|🇮🇹|🇱🇻|🇱🇹|🇱🇺|🇲🇰|🇳🇱|🇵🇱|🇵🇹|🇷🇴|🇸🇰|🇸🇮|🇪🇸|🇸🇪|🇬🇧|HK|TW|SG|JP|KR|US|GB|CDG|FRA|AMS|MAD|BCN|FCO|MUC|BRU|HKG|TPE|TSA|KHH|SIN|XSP|NRT|HND|KIX|CTS|FUK|JFK|LAX|ORD|ATL|DFW|SFO|MIA|SEA|IAD|LHR|LGW))'
-FilterAL: &FilterAL '^(?!.*(DIRECT|吹雪|皮卡丘|养鸡场XFLTD|XFLTD|[V]|直接连接|群|邀请|返利|循环|官网|客服|网站|网址|获取|订阅|流量|到期|机场|下次|版本|官址|备用|过期|已用|联系|邮箱|工单|贩卖|通知|倒卖|防止|国内|地址|频道|无法|说明|使用|提示|特别|访问|支持|教程|关注|更新|作者|加入|USE|USED|TOTAL|EXPIRE|EMAIL|Panel|Channel|Author))'
+FilterAL: &FilterAL '^(?!.*(DIRECT|吹雪|皮卡丘|养鸡场XFLTD|[V]|直接连接|群|邀请|返利|循环|官网|客服|网站|网址|获取|订阅|流量|到期|机场|下次|版本|官址|备用|过期|已用|联系|邮箱|工单|贩卖|通知|倒卖|防止|国内|地址|频道|无法|说明|使用|提示|特别|访问|支持|教程|关注|更新|作者|加入|USE|USED|TOTAL|EXPIRE|EMAIL|Panel|Channel|Author))'
 
 # 策略组代理列表模板 - 预定义的代理节点优先级排序
 SelectFB: &SelectFB {type: select, proxies: [全球手动,香港策略, 狮城策略, 日本策略, 韩国策略, 美国策略, 台湾策略, 欧盟策略, 冷门自选, 直接连接]}
 SelectPY: &SelectPY {type: select, proxies: [默认代理, 全球手动,香港策略, 狮城策略, 日本策略, 韩国策略, 美国策略, 台湾策略, 欧盟策略, 冷门自选, 直接连接]}
 SelectDC: &SelectDC {type: select, proxies: [直接连接, 默认代理, 香港策略, 狮城策略, 日本策略, 韩国策略, 美国策略, 台湾策略, 欧盟策略, 冷门自选, 全球手动]}
+SelectHK: &SelectHK {type: select, proxies: [香港策略, 默认代理, 狮城策略, 日本策略, 韩国策略, 美国策略, 台湾策略, 欧盟策略, 冷门自选, 全球手动, 直接连接]}
 SelectSG: &SelectSG {type: select, proxies: [狮城策略, 默认代理, 香港策略, 日本策略, 韩国策略, 美国策略, 台湾策略, 欧盟策略, 冷门自选, 全球手动, 直接连接]}
 SelectUS: &SelectUS {type: select, proxies: [美国策略, 默认代理, 香港策略, 狮城策略, 日本策略, 韩国策略, 台湾策略, 欧盟策略, 冷门自选, 全球手动, 直接连接]}
 
@@ -51,7 +53,7 @@ sniffer:
 # DNS配置
 dns:
   enable: true
-  ipv6: false
+  ipv6: true
   enhanced-mode: fake-ip
   fake-ip-range: 198.18.0.1/16
   default-nameserver:
@@ -69,6 +71,24 @@ dns:
     - +.docker.io
     - +.market.xiaomi.com
     - +.push.apple.com
+    # 放行 GitHub 域名走真实 IP 解析：web_fetch 等按真实公网 IP 强校验的工具才能抓到
+    # （fake-ip 会把 github.com 解析成 198.18.x.x 保留段 → 被判 non-public IP 拒绝）
+    - +.github.com
+    - +.githubusercontent.com
+    - +.githubassets.com
+    - +.github.io
+  # 覆盖订阅自带的 nameserver-policy（其把非中国域名解析绑定到 udp://8.8.8.8#🌐 DNS 出口，
+  # 若节点不支持 UDP 则 DNS 全挂）。改用 DoH 走 TCP，直连场景还能拿到国内 CDN IP
+  nameserver-policy:
+    "geosite:private":
+      - 223.5.5.5
+      - 119.29.29.29
+    "geosite:cn":
+      - 223.5.5.5
+      - 119.29.29.29
+    "geosite:geolocation-!cn":
+      - https://dns.alidns.com/dns-query
+      - https://doh.pub/dns-query
 
 # ==================== 代理策略组 ====================
 proxy-groups:
@@ -78,6 +98,8 @@ proxy-groups:
   - {name: 国内流量,     <<: *SelectDC, icon: https://github.com/Koolson/Qure/raw/master/IconSet/Color/China.png}
   - {name: 兜底流量,     <<: *SelectPY, icon: https://github.com/Koolson/Qure/raw/master/IconSet/Color/Final.png}
   - {name: 直接连接,     type: select, proxies: [DIRECT], hidden: true, icon: https://github.com/Koolson/Qure/raw/master/IconSet/Color/Direct.png}
+  # 订阅自带 DNS 配置将 geosite 非中国域名的解析绑定到此组，覆写替换了 proxy-groups 后必须补回，否则 DNS 报 interface not found
+  - {name: 🌐 DNS 出口,  type: select, proxies: [直接连接,默认代理], hidden: true, icon: https://github.com/Koolson/Qure/raw/master/IconSet/Color/Global.png}
   - {name: 全球手动,     type: select, proxies: [全球自动, 全球自动-散列, 全球自动-轮询],include-all: true, filter: *FilterAL, icon: https://github.com/Koolson/Qure/raw/master/IconSet/Color/Clubhouse.png}
 
   # ==================== 功能策略组 ====================
@@ -85,6 +107,8 @@ proxy-groups:
   - {name: 抖音书定位,   type: select, proxies: [直接连接, 香港策略, 台湾策略, 狮城策略, 日本策略, 韩国策略, 美国策略, 欧盟策略], icon: https://github.com/Koolson/Qure/raw/master/IconSet/Color/Null_Nation.png}
 
   # ==================== 媒体服务 ====================
+  - {name: GitHub,      <<: *SelectPY, icon: https://github.com/Koolson/Qure/raw/master/IconSet/Color/GitHub.png}
+  - {name: 微软服务,     <<: *SelectPY, icon: https://github.com/Koolson/Qure/raw/master/IconSet/Color/Microsoft.png}
   - {name: Emby服,      <<: *SelectPY, icon: https://github.com/Koolson/Qure/raw/master/IconSet/Color/Emby.png}
   - {name: 油管视频,     <<: *SelectPY, icon: https://github.com/Koolson/Qure/raw/master/IconSet/Color/YouTube.png}
   - {name: 奈飞视频,     <<: *SelectPY, icon: https://github.com/Koolson/Qure/raw/master/IconSet/Color/Netflix.png}
@@ -98,10 +122,8 @@ proxy-groups:
 
   # ==================== 商业服务 ====================
   - {name: 人工智能,     <<: *SelectUS, icon: https://github.com/Koolson/Qure/raw/master/IconSet/Color/AI.png}
-  - {name: GitHub,      <<: *SelectPY, icon: https://github.com/Koolson/Qure/raw/master/IconSet/Color/GitHub.png}
   - {name: 货币平台,     <<: *SelectSG, icon: https://raw.githubusercontent.com/Orz-3/mini/master/Alpha/Bitcloud.png}
   - {name: 游戏平台,     <<: *SelectPY, icon: https://github.com/Koolson/Qure/raw/master/IconSet/Color/Game.png}
-  - {name: 微软服务,     <<: *SelectPY, icon: https://github.com/Koolson/Qure/raw/master/IconSet/Color/Microsoft.png}
   - {name: 谷歌服务,     <<: *SelectPY, icon: https://github.com/Koolson/Qure/raw/master/IconSet/Color/Google_Search.png}
   - {name: 苹果服务,     <<: *SelectPY, icon: https://github.com/Koolson/Qure/raw/master/IconSet/Color/Apple.png}
 
@@ -126,7 +148,7 @@ proxy-groups:
   - {name: 美国自动,     <<: *BaseUT, include-all: true, filter: *FilterUS, icon: https://github.com/Koolson/Qure/raw/master/IconSet/Color/Auto.png}
   - {name: 欧盟自动,     <<: *BaseUT, include-all: true, filter: *FilterEU, icon: https://github.com/Koolson/Qure/raw/master/IconSet/Color/Auto.png}
   - {name: 全球自动,     <<: *BaseUT, include-all: true, filter: *FilterAL, icon: https://github.com/Koolson/Qure/raw/master/IconSet/Color/Auto.png}
-  # ==================== 负载均衡-散列 ====================
+  # ==================== 负载均衡-散列 =====================
   - {name: 香港均衡-散列, <<: *BaseCH, include-all: true, filter: *FilterHK, icon: https://github.com/Koolson/Qure/raw/master/IconSet/Color/Round_Robin_1.png}
   - {name: 台湾均衡-散列, <<: *BaseCH, include-all: true, filter: *FilterTW, icon: https://github.com/Koolson/Qure/raw/master/IconSet/Color/Round_Robin_1.png}
   - {name: 狮城均衡-散列, <<: *BaseCH, include-all: true, filter: *FilterSG, icon: https://github.com/Koolson/Qure/raw/master/IconSet/Color/Round_Robin_1.png}
@@ -149,8 +171,11 @@ proxy-groups:
 # ==================== 规则路由 ====================
 rules: 
   # 拦截规则
+  - DOMAIN-SUFFIX,bing.com,直接连接
   - RULE-SET,Tracking,REJECT
   - RULE-SET,Advertising,REJECT
+  - DOMAIN,oa.shinetechnology.com,直接连接
+  - DOMAIN-SUFFIX,nodeloc.com,直接连接
   
   # 域名规则
   - RULE-SET,LocationDKS,抖音书定位
@@ -159,6 +184,8 @@ rules:
   - RULE-SET,XPTV,直接连接
   - RULE-SET,Download,直接连接
   - RULE-SET,AppleCN,直接连接
+  - RULE-SET,GitHub,GitHub
+  - RULE-SET,Microsoft,微软服务
   - RULE-SET,AI,人工智能
   - DOMAIN-KEYWORD,speedtest,网络测试
   - RULE-SET,Speedtest,网络测试
@@ -173,15 +200,11 @@ rules:
   - RULE-SET,YouTube,油管视频
   - RULE-SET,Streaming,国际媒体
   - RULE-SET,Apple,苹果服务 
-  - RULE-SET,Google,谷歌服务
-  - RULE-SET,GitHub,GitHub
-  - RULE-SET,Microsoft,微软服务
-  - GEOIP,LAN,直接连接
-  - RULE-SET,China,国内流量
+  - RULE-SET,Google,谷歌服务  
   - RULE-SET,Proxy,国外流量
-  
+  - RULE-SET,China,国内流量
 
-  # IP规则
+  # IP规则 
   - RULE-SET,AdvertisingIP,REJECT,no-resolve
   - RULE-SET,PrivateIP,直接连接,no-resolve
   - RULE-SET,XPTVIP,直接连接,no-resolve
@@ -194,7 +217,7 @@ rules:
   - RULE-SET,GoogleIP,谷歌服务,no-resolve
   - RULE-SET,ProxyIP,国外流量,no-resolve
   - RULE-SET,ChinaIP,国内流量,no-resolve
-  
+
   # 兜底规则
   - MATCH,兜底流量
 
